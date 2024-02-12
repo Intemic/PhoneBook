@@ -1,4 +1,6 @@
 import pickle
+import csv
+import re
 from dataclasses import dataclass, asdict
 
 @dataclass
@@ -6,11 +8,9 @@ class Record:
     '''Представляет запись о человеке в телефонной книге.'''
 
     PRINT_TEMPLATE = (
-        'Фамилия:         {family}\n'
-        'Имя:             {name}\n'
-        'Отчество:        {surname}\n'
-        'Рабочий телефон: {working_phone}\n'
-        'Сотовый телефон: {mobile_phone}'
+        '{family:20} {name:20} {surname:20}'
+        '{working_phone:^20}'
+        '{mobile_phone:^20}'
     )
 
     family: str
@@ -26,8 +26,18 @@ class Record:
 
 
 class PhoneBook:
+    MAX_RECORD_IN_PAGE = 5
+    FILE_NAME = 'book.txt'
+    HEADER = '{:20} {:20} {:20} {:20} {:20}'.format(
+        'Фамилия ',
+        'Имя',
+        'Отчество',
+        'Рабочий телефон', 
+        'Сотовый телефон'
+    )
+
     def __init__(self, file_name: str = 'book.txt') -> None:
-        self.records = []
+        # self.records = []
 
         self.operations = {
             1: self.printing_telephone_directory,
@@ -35,8 +45,6 @@ class PhoneBook:
             3: self.change_records,
             4: self.search_records,
         }
-
-        self.fobj = open(file_name, 'ab+')
 
     @staticmethod
     def get_non_empty_value(text: str, value: str) -> str:
@@ -47,12 +55,31 @@ class PhoneBook:
 
     @staticmethod
     def get_correct_phone_number(text: str, value: str) -> str:
+        # while not value:
+        #     value = input(text).strip()
+        #     # if not re.fullmatch('^((\+7|7|8)+([0-9]){10})$', value):
+        #     if not re.fullmatch('^(8+([0-9]){10})$', value):
+        #         value = ''
+        
         return value
 
     def printing_telephone_directory(self):
         '''Вывод телефонного справочника.'''
-        for record in self.records:
-            print(record.get_message())
+        with open(PhoneBook.FILE_NAME, encoding='utf-8') as f:
+            records = [Record(**record) for record in csv.DictReader(f,  delimiter=';')]
+
+        if not records:
+            print('Нет данных')
+        else:    
+            page = 0
+            while records:
+                page += 1
+                print(f'\nСтраница {page}')
+                print(PhoneBook.HEADER)
+                for record in records[:PhoneBook.MAX_RECORD_IN_PAGE]:
+                    print(record.get_message())
+                    print(asdict(record))
+                records = records[PhoneBook.MAX_RECORD_IN_PAGE:]
 
     def add_new_record(self):
         '''Добавление новой записи.'''
@@ -63,27 +90,27 @@ class PhoneBook:
         name = PhoneBook.get_non_empty_value('Имя:', name) 
         surname = ''
         surname = PhoneBook.get_non_empty_value('Отчество:', surname)
-        # organization = input('Организация:')
+        organization = input('Организация:')
         working_phone = PhoneBook.get_correct_phone_number('Рабочий телефон:', working_phone)
         mobile_phone = PhoneBook.get_correct_phone_number('Сотовый телефон:', mobile_phone)
 
-        self.records.append(Record(
-                family,
-                name,
-                surname,
-                organization,
-                working_phone,
-                mobile_phone
+        rec = list(asdict(
+                Record(
+                    family,
+                    name,
+                    surname,
+                    organization,
+                    working_phone,
+                    mobile_phone
+                )
             )
         )
-        
-        pickle.dump(
-            self.records[-1],
-            self.fobj
-        )
 
-        print('Создана запись: ', (self.records[-1]).get_message())
-
+        with open(PhoneBook.FILE_NAME, encoding='utf-8', mode='a+') as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=list(rec.keys()), quoting=csv.QUOTE_NONNUMERIC)
+            writer.writerow(**rec)
 
     def change_records(self):
         '''Изменить записи.'''
@@ -97,7 +124,7 @@ class PhoneBook:
         '''Вывод меню и вызов обработчика для пункта меню.'''
 
         while True:
-            print('Телефонный справочник, возможные операции:', '\n')
+            print('\nТелефонный справочник, возможные операции:', '\n')
             print('0 - Выход из программы')
             print('1 - Вывод содержимого')
             print('2 - Добавление новой записи')
