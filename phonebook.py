@@ -1,14 +1,14 @@
+import pickle
 from dataclasses import dataclass, asdict
-
 
 @dataclass
 class Record:
     '''Представляет запись о человеке в телефонной книге.'''
 
     PRINT_TEMPLATE = (
-        'Фамилия: {family}\n'
-        'Имя: {name}\n'
-        'Отчество: {surname}\n'
+        'Фамилия:         {family}\n'
+        'Имя:             {name}\n'
+        'Отчество:        {surname}\n'
         'Рабочий телефон: {working_phone}\n'
         'Сотовый телефон: {mobile_phone}'
     )
@@ -36,6 +36,8 @@ class PhoneBook:
             4: self.search_records,
         }
 
+        self.fobj = open(file_name, 'ab+')
+
     @staticmethod
     def get_non_empty_value(text: str, value: str) -> str:
         '''Получение не пустого значения, имитация "обязательного" поля.'''
@@ -49,6 +51,8 @@ class PhoneBook:
 
     def printing_telephone_directory(self):
         '''Вывод телефонного справочника.'''
+        for record in self.records:
+            print(record.get_message())
 
     def add_new_record(self):
         '''Добавление новой записи.'''
@@ -62,7 +66,7 @@ class PhoneBook:
         # organization = input('Организация:')
         working_phone = PhoneBook.get_correct_phone_number('Рабочий телефон:', working_phone)
         mobile_phone = PhoneBook.get_correct_phone_number('Сотовый телефон:', mobile_phone)
-        
+
         self.records.append(Record(
                 family,
                 name,
@@ -71,6 +75,11 @@ class PhoneBook:
                 working_phone,
                 mobile_phone
             )
+        )
+        
+        pickle.dump(
+            self.records[-1],
+            self.fobj
         )
 
         print('Создана запись: ', (self.records[-1]).get_message())
@@ -93,15 +102,20 @@ class PhoneBook:
             print('1 - Вывод содержимого')
             print('2 - Добавление новой записи')
             print('3 - Изменить запись')
-            print('4 - Поиск записи')
+            print('4 - Поиск записи\n')
 
             try:
                 result = int(input('Выберите пункт меню: ').strip())
                 if not result:
+                    self.fobj.close()
                     break
+
                 self.operations[result]()    
-            except Exception:
+            except ValueError:
                 print('Выберите действительное значение', )
+            except Exception as ex:    
+                print('Что то пошло нет так: ')
+                break
 
 
 if __name__ == '__main__':
