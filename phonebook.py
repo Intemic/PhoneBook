@@ -1,7 +1,7 @@
-import pickle
 import csv
 import re
 from dataclasses import dataclass, asdict
+
 
 @dataclass
 class Record:
@@ -13,12 +13,57 @@ class Record:
         '{mobile_phone:^20}'
     )
 
-    family: str
-    name: str
-    surname: str
-    organization: str
-    working_phone: str
-    mobile_phone: str
+    family: str = None
+    name: str = None
+    surname: str = None
+    organization: str = None
+    working_phone: str = None
+    mobile_phone: str = None
+
+    def __eq__(self, __value: object) -> bool:
+        result = True
+
+        if (self.family is not None and
+           __value.family is not None):
+            result = bool(
+                result and
+                self.family.lower() == __value.family.lower()
+            )
+
+        if (self.name is not None and
+           __value.name is not None):
+            result = bool(
+                result and self.name.lower() == __value.name.lower()
+            )
+
+        if (self.surname is not None and
+           __value.surname is not None):
+            result = bool(
+                result and self.surname.lower() == __value.surname.lower()
+            )
+
+        if (self.organization is not None and
+           __value.organization is None):
+            result = bool(
+                result and
+                self.organization.lower() == __value.organization.lower()
+            )
+
+        if (self.working_phone is not None and
+           __value.working_phone is None):
+            result = bool(
+                result and
+                self.working_phone.lower() == __value.working_phone.lower()
+            )
+
+        if (self.mobile_phone is None and
+           __value.mobile_phone is None):
+            result = bool(
+                result and
+                self.mobile_phone.lower() == __value.mobile_phone.lower()
+            )
+
+        return result
 
     def get_message(self) -> str:
         '''Вывод записи.'''
@@ -32,13 +77,13 @@ class PhoneBook:
         'Фамилия ',
         'Имя',
         'Отчество',
-        'Рабочий телефон', 
+        'Рабочий телефон',
         'Сотовый телефон'
     )
 
-    def __init__(self, file_name: str = 'book.txt') -> None:
-        # self.records = []
+    
 
+    def __init__(self, file_name: str = 'book.txt') -> None:
         self.operations = {
             1: self.printing_telephone_directory,
             2: self.add_new_record,
@@ -60,17 +105,21 @@ class PhoneBook:
         #     # if not re.fullmatch('^((\+7|7|8)+([0-9]){10})$', value):
         #     if not re.fullmatch('^(8+([0-9]){10})$', value):
         #         value = ''
-        
+
         return value
 
     def printing_telephone_directory(self):
         '''Вывод телефонного справочника.'''
         with open(PhoneBook.FILE_NAME, encoding='utf-8') as f:
-            records = [Record(**record) for record in csv.DictReader(f,  delimiter=';')]
+            records = [
+                Record(**record) for record in csv.DictReader(
+                    f,  delimiter=';'
+                )
+            ]
 
         if not records:
             print('Нет данных')
-        else:    
+        else:
             page = 0
             while records:
                 page += 1
@@ -84,15 +133,20 @@ class PhoneBook:
     def add_new_record(self):
         '''Добавление новой записи.'''
         print('Введите следующие данные:')
-        family, name, surname, organization, working_phone, mobile_phone = '', '', '', '', '', '' 
+        family, name, surname, organization, = '', '', '', ''
+        working_phone, mobile_phone = '', ''
         family = PhoneBook.get_non_empty_value('Фамилия:', family)
         name = ''
-        name = PhoneBook.get_non_empty_value('Имя:', name) 
+        name = PhoneBook.get_non_empty_value('Имя:', name)
         surname = ''
         surname = PhoneBook.get_non_empty_value('Отчество:', surname)
         organization = input('Организация:')
-        working_phone = PhoneBook.get_correct_phone_number('Рабочий телефон:', working_phone)
-        mobile_phone = PhoneBook.get_correct_phone_number('Сотовый телефон:', mobile_phone)
+        working_phone = PhoneBook.get_correct_phone_number(
+            'Рабочий телефон:', working_phone
+        )
+        mobile_phone = PhoneBook.get_correct_phone_number(
+            'Сотовый телефон:', mobile_phone
+        )
 
         rec = list(asdict(
                 Record(
@@ -114,11 +168,11 @@ class PhoneBook:
 
     def change_records(self):
         '''Изменить записи.'''
-        pass    
+        pass
 
     def search_records(self):
         '''Поиск записей по параметрам'''
-        pass   
+        
 
     def show_menu(self):
         '''Вывод меню и вызов обработчика для пункта меню.'''
@@ -137,14 +191,17 @@ class PhoneBook:
                     self.fobj.close()
                     break
 
-                self.operations[result]()    
+                self.operations[result]()
             except ValueError:
                 print('Выберите действительное значение', )
-            except Exception as ex:    
+            except Exception:
                 print('Что то пошло нет так: ')
                 break
 
 
 if __name__ == '__main__':
     phone_book = PhoneBook()
-    phone_book.show_menu()
+    # phone_book.show_menu()
+    record = Record(name='123', working_phone='+7123456789', surname='test')
+    record2 = Record(name='123', working_phone='+7123456789')
+    print(record == record2)
