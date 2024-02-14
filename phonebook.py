@@ -156,8 +156,21 @@ class PhoneBook:
         return value
 
     @staticmethod
-    def get_select_items_menu():
-        pass
+    def get_select_items_menu(menu: dict) -> list[int]:
+        sel = []
+        while True:
+            try:
+                inpt = input('Выберите пункт(ы) меню: ').strip()
+                if not inpt:
+                    continue
+
+                #  сформируем перечень пунктов для заполнения
+                #  вынесем отдельно чтобы проверить корректность ввода
+                for item in map(int, inpt.split()):
+                    dict_search[PhoneBook.SEARCH_MENU_KEY[item]] = None
+
+            except (ValueError, KeyError):
+                print('Выберите действительное значение', )
 
     @staticmethod
     def printing_telephone_directory():
