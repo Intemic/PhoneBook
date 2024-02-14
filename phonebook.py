@@ -73,6 +73,7 @@ class Record:
 class PhoneBook:
     # кол-во записей на странице
     MAX_RECORD_IN_PAGE = 5
+    # имя файла с данными
     FILE_NAME = 'book.txt'
     # заголовок таблицы
     HEADER = '{:5} {:20} {:20} {:20} {:20} {:20} {:20}'.format(
@@ -113,6 +114,8 @@ class PhoneBook:
 
     @staticmethod
     def get_records() -> list[Record]:
+        '''Возращает перечень записей телефоной книги.'''
+
         records = []
         try:
             with open(PhoneBook.FILE_NAME, encoding='utf-8') as f:
@@ -128,6 +131,8 @@ class PhoneBook:
         return records
 
     def output_records(records: list[Record]) -> None:
+        '''Отображает список записей тел. книги.'''
+
         page = 0
         indx = 0
         while records:
@@ -142,32 +147,42 @@ class PhoneBook:
     @staticmethod
     def get_non_empty_value(text: str, value: str) -> str:
         '''Получение не пустого значения, имитация "обязательного" поля.'''
+
         while not value:
             value = input(text).strip()
         return value
 
     @staticmethod
     def get_correct_phone_number(text: str, value: str) -> str:
+        '''Проверка ввода телефоного номера на корректность.'''
+
         while not value:
             value = input(text).strip()
             if not re.fullmatch('^(8+([0-9]){10})$', value):
+                print('Некорректное значение')
                 value = ''
 
         return value
 
     @staticmethod
-    def get_select_items_menu(menu: dict) -> list[int]:
-        sel = []
+    def get_select_items_menu(menu: dict, text: str, convert: bool = True) -> list[int]:
         while True:
+            sel = []
             try:
-                inpt = input('Выберите пункт(ы) меню: ').strip()
+                inpt = input(text).strip()
                 if not inpt:
                     continue
 
-                #  сформируем перечень пунктов для заполнения
-                #  вынесем отдельно чтобы проверить корректность ввода
-                for item in map(int, inpt.split()):
-                    dict_search[PhoneBook.SEARCH_MENU_KEY[item]] = None
+                for item in inpt.split():
+                    if convert:
+                        item = int(item)
+
+                    if item in menu:
+                        sel.append(item)
+                    else:
+                        raise KeyError('Некорректный ключ')
+
+                return sel
 
             except (ValueError, KeyError):
                 print('Выберите действительное значение', )
@@ -192,38 +207,34 @@ class PhoneBook:
         name = ''
         name = PhoneBook.get_non_empty_value('Имя:', name)
         surname = ''
-        # surname = PhoneBook.get_non_empty_value('Отчество:', surname)
-        # organization = input('Организация:')
-        # working_phone = PhoneBook.get_correct_phone_number(
-        #     'Рабочий телефон:', working_phone
-        # )
-        # mobile_phone = PhoneBook.get_correct_phone_number(
-        #     'Сотовый телефон:', mobile_phone
-        # )
+        surname = PhoneBook.get_non_empty_value('Отчество:', surname)
+        organization = input('Организация:')
+        working_phone = PhoneBook.get_correct_phone_number(
+            'Рабочий телефон:', working_phone
+        )
+        mobile_phone = PhoneBook.get_correct_phone_number(
+            'Сотовый телефон:', mobile_phone
+        )
 
-        # rec = []
-        # rec.append(asdict(
-        #         Record(
-        #             family,
-        #             name,
-        #             surname,
-        #             organization,
-        #             working_phone,
-        #             mobile_phone
-        #         )
-        #     )
-        # )
+        obj = Record(
+            family,
+            name,
+            surname,
+            organization,
+            working_phone,
+            mobile_phone
+        )
 
-        # with open(PhoneBook.FILE_NAME, encoding='utf-8', mode='a+') as f:
-        #     writer = csv.DictWriter(
-        #         f,
-        #         fieldnames=list(rec[0].keys()),
-        #         quoting=csv.QUOTE_NONE,
-        #         delimiter=';',
-        #         dialect=csv.unix_dialect
-        #     )
-        #     writer.writerow(rec[0])
-        print('1', '2', sep=';', file=open(PhoneBook.FILE_NAME, encoding='utf-8', mode='a+'))
+        with open(PhoneBook.FILE_NAME, encoding='utf-8', mode='a+') as f:
+            writer = csv.DictWriter(
+                f,
+                # fieldnames=list(rec[0].keys()),
+                fieldnames=list(obj.__dict__.keys()),
+                quoting=csv.QUOTE_NONE,
+                delimiter=';',
+                dialect=csv.unix_dialect
+            )
+            writer.writerow(asdict(obj))
 
     @staticmethod
     def change_records():
@@ -238,22 +249,54 @@ class PhoneBook:
         PhoneBook.output_records(records)
 
         while True:
-            try:
-                rec = records[
-                    int(input('\nВыберите номер записи для изменения: ').strip())
-                ]
+            # получим выбор пользователя    
+            sel = PhoneBook.get_select_items_menu(
+                {i + 1: None for i in range(len(records))},
+                '\nВыберите номер записи для изменения: '
+            )
 
-                # выведем запись для просмотра
-                print('Изменяемая запись:')
-                print(rec.get_message())
+            obj = records[sel[0] - 1]
+            # выберем что меняем 
+            print('\nВыберите аттрибуты для изменения:', '\n')
+            for key, item in PhoneBook.SEARCH_MENU_KEY.items():
+                print(key, '-', PhoneBook.SEARCH_MENU_TEXT[item])
+            print('Можно выбрать несколько пунктов, через пробел')
 
-            except ValueError:
-                print('Выберите действительное значение', )
-            except IndexError:
-                print('Выберите действительный номер записи', )
-            except Exception:
-                print('Что то пошло нет так: ')
+            sel_items = PhoneBook.get_select_items_menu(
+                PhoneBook.SEARCH_MENU_KEY,
+                '\nВыберите пункт(ы) меню: '
+            )
+
+            for item in sel_items:
+                obj.__dict__[PhoneBook.SEARCH_MENU_KEY[item]] = input(
+                    f'Введите {
+                        PhoneBook.SEARCH_MENU_TEXT[
+                            PhoneBook.SEARCH_MENU_KEY[item]
+                        ]
+                    }: '
+                )
+        
+            sel = PhoneBook.get_select_items_menu(
+                {'y': None, 'n': None},
+                '\nИзменить другую запись(y/n)?: ',
+                convert=False
+            )
+
+            if sel[0] == 'n':
                 break
+        
+        # сохраним изменения
+        with open(PhoneBook.FILE_NAME, encoding='utf-8', mode='w') as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=list(records[0].__dict__.keys()),
+                quoting=csv.QUOTE_NONE,
+                delimiter=';',
+                dialect=csv.unix_dialect
+            )
+            writer.writeheader()
+            for rec in records:
+                writer.writerow(asdict(rec))       
 
 
     @staticmethod
@@ -264,39 +307,44 @@ class PhoneBook:
         if not records:
             print('Нет данных, нечего искать')
         else:
-            print('\nВыберите критерии поиска:', '\n')
-            for key, item in PhoneBook.SEARCH_MENU_KEY.items():
-                print(key, '-', PhoneBook.SEARCH_MENU_TEXT[item])
-            print('Можно выбрать несколько пунктов, через пробел')
-
             while True:
-                try:
-                    inpt = input('Выберите пункт(ы) меню: ').strip()
-                    if not inpt:
-                        break
+                print('\nВыберите критерии поиска:', '\n')
+                for key, item in PhoneBook.SEARCH_MENU_KEY.items():
+                    print(key, '-', PhoneBook.SEARCH_MENU_TEXT[item])
+                print('Можно выбрать несколько пунктов, через пробел')
 
-                    #  сформируем перечень пунктов для заполнения
-                    #  вынесем отдельно чтобы проверить корректность ввода
-                    dict_search = {}
-                    for item in map(int, inpt.split()):
-                        dict_search[PhoneBook.SEARCH_MENU_KEY[item]] = None
+                sel_items = PhoneBook.get_select_items_menu(
+                    PhoneBook.SEARCH_MENU_KEY,
+                    '\nВыберите пункт(ы) меню: '
+                )
 
-                    for item in dict_search:
-                        dict_search[item] = input(
-                            f'Введите {PhoneBook.SEARCH_MENU_TEXT[item]}: '
-                        )
+                #  сформируем перечень пунктов для заполнения
+                dict_search = {}
+                for item in sel_items:
+                    dict_search[PhoneBook.SEARCH_MENU_KEY[item]] = None
 
-                    result = []
-                    shablon = Record(**dict_search)
-                    result = [rec for rec in records if rec == shablon]
+                for item in dict_search:
+                    dict_search[item] = input(
+                        f'Введите {PhoneBook.SEARCH_MENU_TEXT[item]}: '
+                    )
 
-                    print(f'\nНайдено {len(result)} соответствий:')
-                    if len(result):
-                        PhoneBook.output_records(result)
+                result = []
+                shablon = Record(**dict_search)
+                # примитивный поиск, можно конечно и сложнее
+                result = [rec for rec in records if rec == shablon]
+
+                print(f'\nНайдено {len(result)} соответствий:')
+                if len(result):
+                    PhoneBook.output_records(result)
+                
+                sel = PhoneBook.get_select_items_menu(
+                    {'y': None, 'n': None},
+                    '\nХотите продолжить поиск(y/n)?: ',
+                    convert=False
+                )
+
+                if sel[0] == 'n':
                     break
-
-                except (ValueError, KeyError):
-                    print('Выберите действительное значение', )
 
     @staticmethod
     def show_menu():
@@ -323,9 +371,4 @@ class PhoneBook:
 
 if __name__ == '__main__':
     phone_book = PhoneBook()
-    rec = Record(name='Anton', family='Luchik')
-    #print(asdict(rec))
-    #phone_book.add_new_record()
-    #phone_book.printing_telephone_directory()
-    # phone_book.search_records()
-    phone_book.change_records()
+    phone_book.show_menu()
