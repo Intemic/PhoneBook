@@ -1,5 +1,6 @@
 import csv
 import re
+import os.path
 from dataclasses import dataclass, asdict
 
 
@@ -21,6 +22,9 @@ class Record:
     mobile_phone: str = None
 
     def __eq__(self, obj: object) -> bool:
+        if not isinstance(obj, Record):
+            return False
+
         result = True
 
         if (self.family is not None and
@@ -94,7 +98,7 @@ class PhoneBook:
         4: ('Поиск записи', 'search_records')
     }
     # меню поиска
-    SEARCH_MENU_KEY = {
+    RECORD_MENU_KEY = {
         1: 'family',
         2: 'name',
         3: 'surname',
@@ -103,7 +107,7 @@ class PhoneBook:
         6: 'mobile_phone'
     }
     # текстовка к меню поиска
-    SEARCH_MENU_TEXT = {
+    RECORD_MENU_TEXT = {
         'family': 'Фамилия',
         'name': 'Имя',
         'surname': 'Отчество',
@@ -125,7 +129,7 @@ class PhoneBook:
                     )
                 ]
         except Exception:
-            # не удалось открыть файл, значит нет данных
+            # не удалось открыть файл, справочник пуст
             pass
 
         return records
@@ -200,41 +204,52 @@ class PhoneBook:
     def add_new_record():
         '''Добавление новой записи.'''
 
-        print('Введите следующие данные:')
-        family, name, surname, organization, = '', '', '', ''
-        working_phone, mobile_phone = '', ''
-        family = PhoneBook.get_non_empty_value('Фамилия:', family)
-        name = ''
-        name = PhoneBook.get_non_empty_value('Имя:', name)
-        surname = ''
-        surname = PhoneBook.get_non_empty_value('Отчество:', surname)
-        organization = input('Организация:')
-        working_phone = PhoneBook.get_correct_phone_number(
-            'Рабочий телефон:', working_phone
-        )
-        mobile_phone = PhoneBook.get_correct_phone_number(
-            'Сотовый телефон:', mobile_phone
-        )
-
-        obj = Record(
-            family,
-            name,
-            surname,
-            organization,
-            working_phone,
-            mobile_phone
-        )
-
-        with open(PhoneBook.FILE_NAME, encoding='utf-8', mode='a+') as f:
-            writer = csv.DictWriter(
-                f,
-                # fieldnames=list(rec[0].keys()),
-                fieldnames=list(obj.__dict__.keys()),
-                quoting=csv.QUOTE_NONE,
-                delimiter=';',
-                dialect=csv.unix_dialect
+        while True:
+            print('\nВведите следующие данные:')
+            family, name, surname, organization, = '', '', '', ''
+            working_phone, mobile_phone = '', ''
+            family = PhoneBook.get_non_empty_value('Фамилия:', family)
+            name = PhoneBook.get_non_empty_value('Имя:', name)
+            surname = PhoneBook.get_non_empty_value('Отчество:', surname)
+            organization = input('Организация:')
+            working_phone = PhoneBook.get_correct_phone_number(
+                'Рабочий телефон:', working_phone
             )
-            writer.writerow(asdict(obj))
+            mobile_phone = PhoneBook.get_correct_phone_number(
+                'Сотовый телефон:', mobile_phone
+            )
+
+            obj = Record(
+                family,
+                name,
+                surname,
+                organization,
+                working_phone,
+                mobile_phone
+            )
+
+            file_exist = os.path.exists(PhoneBook.FILE_NAME)
+
+            with open(PhoneBook.FILE_NAME, encoding='utf-8', mode='a+') as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=list(obj.__dict__.keys()),
+                    quoting=csv.QUOTE_NONE,
+                    delimiter=';',
+                    dialect=csv.unix_dialect
+                )
+                if not file_exist:
+                    writer.writeheader()
+                writer.writerow(asdict(obj))
+
+            sel = PhoneBook.get_select_items_menu(
+                {'y': None, 'n': None},
+                '\nВвести еще одну запись(y/n)?: ',
+                convert=False
+            )
+
+            if sel[0] == 'n':
+                break           
 
     @staticmethod
     def change_records():
@@ -258,20 +273,20 @@ class PhoneBook:
             obj = records[sel[0] - 1]
             # выберем что меняем 
             print('\nВыберите аттрибуты для изменения:', '\n')
-            for key, item in PhoneBook.SEARCH_MENU_KEY.items():
-                print(key, '-', PhoneBook.SEARCH_MENU_TEXT[item])
+            for key, item in PhoneBook.RECORD_MENU_KEY.items():
+                print(key, '-', PhoneBook.RECORD_MENU_TEXT[item])
             print('Можно выбрать несколько пунктов, через пробел')
 
             sel_items = PhoneBook.get_select_items_menu(
-                PhoneBook.SEARCH_MENU_KEY,
+                PhoneBook.RECORD_MENU_KEY,
                 '\nВыберите пункт(ы) меню: '
             )
 
             for item in sel_items:
-                obj.__dict__[PhoneBook.SEARCH_MENU_KEY[item]] = input(
+                obj.__dict__[PhoneBook.RECORD_MENU_KEY[item]] = input(
                     f'Введите {
-                        PhoneBook.SEARCH_MENU_TEXT[
-                            PhoneBook.SEARCH_MENU_KEY[item]
+                        PhoneBook.RECORD_MENU_TEXT[
+                            PhoneBook.RECORD_MENU_KEY[item]
                         ]
                     }: '
                 )
@@ -309,23 +324,23 @@ class PhoneBook:
         else:
             while True:
                 print('\nВыберите критерии поиска:', '\n')
-                for key, item in PhoneBook.SEARCH_MENU_KEY.items():
-                    print(key, '-', PhoneBook.SEARCH_MENU_TEXT[item])
+                for key, item in PhoneBook.RECORD_MENU_KEY.items():
+                    print(key, '-', PhoneBook.RECORD_MENU_TEXT[item])
                 print('Можно выбрать несколько пунктов, через пробел')
 
                 sel_items = PhoneBook.get_select_items_menu(
-                    PhoneBook.SEARCH_MENU_KEY,
+                    PhoneBook.RECORD_MENU_KEY,
                     '\nВыберите пункт(ы) меню: '
                 )
 
                 #  сформируем перечень пунктов для заполнения
                 dict_search = {}
                 for item in sel_items:
-                    dict_search[PhoneBook.SEARCH_MENU_KEY[item]] = None
+                    dict_search[PhoneBook.RECORD_MENU_KEY[item]] = None
 
                 for item in dict_search:
                     dict_search[item] = input(
-                        f'Введите {PhoneBook.SEARCH_MENU_TEXT[item]}: '
+                        f'Введите {PhoneBook.RECORD_MENU_TEXT[item]}: '
                     )
 
                 result = []
