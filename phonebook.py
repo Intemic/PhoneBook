@@ -75,6 +75,8 @@ class Record:
 
 
 class PhoneBook:
+    '''Класс предоставляет основную функциональность по работе со справочником.'''
+
     # кол-во записей на странице
     MAX_RECORD_IN_PAGE = 5
     # имя файла с данными
@@ -170,6 +172,8 @@ class PhoneBook:
 
     @staticmethod
     def get_select_items_menu(menu: dict, text: str, convert: bool = True) -> list[int]:
+        '''Обработка выбора пользователя из предоставленного меню.'''
+
         while True:
             sel = []
             try:
