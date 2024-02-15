@@ -69,7 +69,7 @@ class Record:
 
         return result
 
-    def get_message(self) -> str:
+    def get_info(self) -> str:
         '''Вывод записи.'''
         return self.PRINT_TEMPLATE.format(**asdict(self))
 
@@ -145,7 +145,7 @@ class PhoneBook:
             print(PhoneBook.HEADER)
             for record in records[:PhoneBook.MAX_RECORD_IN_PAGE]:
                 indx += 1
-                print(f'{indx:<5}', record.get_message())
+                print(f'{indx:<5}', record.get_info())
             records = records[PhoneBook.MAX_RECORD_IN_PAGE:]
 
     @staticmethod
@@ -194,6 +194,7 @@ class PhoneBook:
     @staticmethod
     def printing_telephone_directory():
         '''Вывод телефонного справочника.'''
+        
         records = PhoneBook.get_records()
         if not records:
             print('Нет данных')
